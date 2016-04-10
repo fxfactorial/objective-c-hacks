@@ -44,7 +44,7 @@ void dump_local_symbols(Class clz)
     Dl_info symbol_info = {NULL, NULL, NULL, NULL};
     if (dladdr((const void *)[address longValue], &symbol_info) != 0) {
       for (size_t counter = 0; counter < [methods count]; counter++) {
-      	if(symbol_info.dli_saddr == &more[counter]) {
+      	if(symbol_info.dli_saddr == more[counter]) {
       	  NSLog(@"Got match! -> Insane!");
       	}
       }
@@ -53,4 +53,29 @@ void dump_local_symbols(Class clz)
 
 }
 
+%hook NSURLSession
+ // This gets called by the app store for a request.
+-(NSURLSessionDataTask *)dataTaskWithRequest:(NSURLRequest *)request
+			   completionHandler:(void (^)(NSData *data,
+						       NSURLResponse *response,
+						       NSError *error))cb
+{
+  NSString *needle = @"ipa?accessKey=";
+  NSString *haystack = [[request URL] absoluteString];
+
+  if ([haystack containsString:needle]) {
+    HBLogInfo(@"ATTN!: Request as string: %@", haystack);
+    HBLogInfo(@"Called datatask with request: %@, headers: %@",
+	      request,
+	      [request allHTTPHeaderFields]);
+
+  }
+  // Can't do:
+  // `return %orig(our_request, our_wrapped_cb);`
+  // because this becomes a background session and completion handlers
+  // are not supported in background sessions.
+  return %orig;
+}
+
+%end
 #endif
