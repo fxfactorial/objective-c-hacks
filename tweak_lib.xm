@@ -53,6 +53,43 @@ void dump_local_symbols(Class clz)
 
 }
 
+NSString* read_line(NSInputStream *sock)
+{
+  uint8_t d[1];
+  NSMutableString *str = [NSMutableString string];
+
+  while ([sock hasBytesAvailable]) {
+    [sock read: d maxLength: 1];
+    if (*d != '\n') {
+      [str appendFormat: @"%c", *d];
+      continue;
+    }
+    break;
+  }
+  return str;
+}
+
+void write_line(NSOutputStream *out_stream, NSString *lineStr)
+{
+  NSData *dt = [lineStr dataUsingEncoding: NSASCIIStringEncoding];
+  [out_stream write:(const uint8_t *)[dt bytes] maxLength:[dt length]];
+  unsigned char crlf[] = "\r\n";
+  [out_stream write:crlf maxLength: 2];
+}
+
+NSString *decode_base64(NSData *base_64)
+{
+  NSString *dump = [base_64 base64EncodedStringWithOptions:0];
+  NSData *decodedData =
+    [[NSData alloc] initWithBase64EncodedString:dump options:0];
+  NSString *decoded =
+    [[NSString alloc] initWithData:decodedData
+			  encoding:NSUTF8StringEncoding];
+  return decoded;
+}
+
+// Hooks
+
 %hook NSURLSession
  // This gets called by the app store for a request.
 -(NSURLSessionDataTask *)dataTaskWithRequest:(NSURLRequest *)request
